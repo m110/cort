@@ -13,7 +13,7 @@ type Server struct {
 	workersSocket *zmq.Socket
 }
 
-func New(name string, uri string) *Server {
+func New(uri string) *Server {
 	server := &Server{
 		id:  uuid.New(),
 		uri: uri,
