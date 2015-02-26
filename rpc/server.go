@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"code.google.com/p/go-uuid/uuid"
+	"errors"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -65,10 +66,13 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) Stop() {
-	if s.running {
-		s.running = false
+func (s *Server) Stop() error {
+	if !s.running {
+		return errors.New("Server is already stopped")
 	}
+
+	s.running = false
+	return nil
 }
 
 func (s *Server) handleSockets(polled []zmq.Polled) {
