@@ -1,6 +1,8 @@
 package service
 
 import (
+	"log"
+
 	"github.com/m110/cort/rpc"
 )
 
@@ -51,11 +53,13 @@ func (s *Service) Stop() error {
 }
 
 func (s *Service) Register() error {
+	log.Println("Registering service")
 	// TODO Register the service to be discovered by other services
 	return nil
 }
 
 func (s *Service) Deregister() error {
+	log.Println("Deregistering service")
 	// TODO Deregister the service
 	return nil
 }

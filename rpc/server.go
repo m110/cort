@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/go-uuid/uuid"
 	"errors"
 	zmq "github.com/pebbe/zmq4"
+	"log"
 )
 
 type Server struct {
@@ -25,6 +26,8 @@ func NewServer(uri string) *Server {
 
 func (s *Server) Start() error {
 	var err error
+
+	log.Println("Starting the server")
 
 	s.remoteSocket, err = zmq.NewSocket(zmq.ROUTER)
 	if err != nil {
@@ -67,6 +70,8 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Stop() error {
+	log.Println("Stopping the server")
+
 	if !s.running {
 		return errors.New("Server is already stopped")
 	}
