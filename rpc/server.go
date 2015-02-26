@@ -1,24 +1,26 @@
 package rpc
 
 import (
-	"code.google.com/p/go-uuid/uuid"
 	"errors"
+	"fmt"
 	zmq "github.com/pebbe/zmq4"
 	"log"
 )
 
 type Server struct {
 	id            string
-	uri           string
+	address       string
+	port          int
 	running       bool
 	remoteSocket  *zmq.Socket
 	workersSocket *zmq.Socket
 }
 
-func NewServer(uri string) *Server {
+func NewServer(address string, port int) *Server {
 	server := &Server{
-		id:  uuid.New(),
-		uri: uri,
+		id:      fmt.Sprintf("%s:%d", address, port),
+		address: address,
+		port:    port,
 	}
 
 	return server
@@ -34,7 +36,7 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	s.remoteSocket.Bind(s.uri)
+	s.remoteSocket.Bind(fmt.Sprintf("tcp://%s:%d", s.address, s.port))
 	if err != nil {
 		return err
 	}
@@ -97,4 +99,16 @@ func (s *Server) handleRemoteSocket() {
 
 func (s *Server) handleWorkersSocket() {
 	// TODO Receive message and route it back to the remote client
+}
+
+func (s *Server) Id() string {
+	return s.id
+}
+
+func (s *Server) Address() string {
+	return s.address
+}
+
+func (s *Server) Port() int {
+	return s.port
 }

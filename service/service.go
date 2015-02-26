@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/hashicorp/consul/api"
 	"log"
 
 	"github.com/m110/cort/rpc"
@@ -9,19 +10,26 @@ import (
 type Service struct {
 	name   string
 	server *rpc.Server
+	consul *api.Client
 }
 
-func NewService(name string, uri string) *Service {
+func NewService(name string, address string, port int) *Service {
 	service := &Service{
-		name:   name,
-		server: rpc.NewServer(uri),
+		name: name,
 	}
+
+	service.server = rpc.NewServer(address, port)
 
 	return service
 }
 
 func (s *Service) Start() error {
 	var err error
+
+	s.consul, err = api.NewClient(api.DefaultConfig())
+	if err != nil {
+		return err
+	}
 
 	err = s.Register()
 	if err != nil {
@@ -53,13 +61,25 @@ func (s *Service) Stop() error {
 }
 
 func (s *Service) Register() error {
-	log.Println("Registering service")
-	// TODO Register the service to be discovered by other services
+	log.Println("Registering service with ID:", s.server.Id())
+
+	agent := s.consul.Agent()
+	agent.ServiceRegister(&api.AgentServiceRegistration{
+		ID:      s.server.Id(),
+		Name:    s.name,
+		Tags:    []string{},
+		Address: s.server.Address(),
+		Port:    s.server.Port(),
+	})
+
 	return nil
 }
 
 func (s *Service) Deregister() error {
 	log.Println("Deregistering service")
-	// TODO Deregister the service
+
+	agent := s.consul.Agent()
+	agent.ServiceDeregister(s.server.Id())
+
 	return nil
 }
