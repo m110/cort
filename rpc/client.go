@@ -2,6 +2,8 @@ package rpc
 
 import (
 	zmq "github.com/pebbe/zmq4"
+
+	"github.com/m110/cort/discovery"
 )
 
 type Client struct {
@@ -19,6 +21,8 @@ func NewClient(service string) *Client {
 
 func (c *Client) Connect() error {
 	var err error
+
+	discovery.Start(c.service)
 
 	c.socket, err = zmq.NewSocket(zmq.REQ)
 	if err != nil {
