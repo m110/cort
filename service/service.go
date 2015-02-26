@@ -64,13 +64,17 @@ func (s *Service) Register() error {
 	log.Println("Registering service with ID:", s.server.Id())
 
 	agent := s.consul.Agent()
-	agent.ServiceRegister(&api.AgentServiceRegistration{
+	err := agent.ServiceRegister(&api.AgentServiceRegistration{
 		ID:      s.server.Id(),
 		Name:    s.name,
 		Tags:    []string{},
 		Address: s.server.Address(),
 		Port:    s.server.Port(),
 	})
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -79,7 +83,11 @@ func (s *Service) Deregister() error {
 	log.Println("Deregistering service")
 
 	agent := s.consul.Agent()
-	agent.ServiceDeregister(s.server.Id())
+	err := agent.ServiceDeregister(s.server.Id())
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
