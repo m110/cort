@@ -21,12 +21,12 @@ func NewService(name string, uri string) *Service {
 func (s *Service) Start() error {
 	var err error
 
-	err = s.server.Start()
+	err = s.Register()
 	if err != nil {
 		return err
 	}
 
-	err = s.Register()
+	err = s.server.Start()
 	if err != nil {
 		return err
 	}
