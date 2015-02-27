@@ -8,10 +8,11 @@ import (
 )
 
 type Server struct {
-	id            string
-	address       string
-	port          int
-	running       bool
+	id      string
+	address string
+	port    int
+	running bool
+
 	remoteSocket  *zmq.Socket
 	workersSocket *zmq.Socket
 }
