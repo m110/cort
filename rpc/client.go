@@ -22,7 +22,10 @@ func NewClient(service string) *Client {
 func (c *Client) Connect() error {
 	var err error
 
-	discovery.Start(c.service)
+	err = discovery.Start(c.service)
+	if err != nil {
+		return err
+	}
 
 	c.socket, err = zmq.NewSocket(zmq.REQ)
 	if err != nil {

@@ -5,38 +5,69 @@ import (
 	"log"
 )
 
-var discovering = map[string]bool{}
+type Discovery struct {
+	service string
+	running bool
 
-func Start(service string) {
-	if !discovering[service] {
-		log.Printf("Starting %s discovery", service)
-		discovering[service] = true
-		go startDiscovery(service)
-	}
+	remoteSocket *zmq.Socket
+	localSocket  *zmq.Socket
 }
 
-func startDiscovery(service string) {
+var discovering = map[string]*Discovery{}
+
+func Start(service string) error {
+	_, ok := discovering[service]
+	if !ok {
+		log.Printf("Starting %s discovery", service)
+
+		d := newDiscovery(service)
+		discovering[service] = d
+
+		err := d.Start()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func newDiscovery(service string) *Discovery {
+	discovery := &Discovery{
+		service: service,
+	}
+
+	return discovery
+}
+
+func (d *Discovery) Start() error {
 	var err error
 
-	remoteSocket, err := zmq.NewSocket(zmq.ROUTER)
+	d.remoteSocket, err = zmq.NewSocket(zmq.ROUTER)
 	if err != nil {
-		log.Println(err)
-		stopDiscovery(service)
-		return
+		return err
 	}
 
-	localSocket, err := zmq.NewSocket(zmq.ROUTER)
+	d.localSocket, err = zmq.NewSocket(zmq.ROUTER)
+	if err == nil {
+		err = d.localSocket.Bind("inproc://" + d.service)
+	}
 	if err != nil {
-		log.Println(err)
-		stopDiscovery(service)
-		return
+		return err
 	}
 
+	d.running = true
+	go d.serve()
+
+	return nil
+}
+
+func (d *Discovery) serve() {
 	poller := zmq.NewPoller()
-	poller.Add(remoteSocket, zmq.POLLIN)
-	poller.Add(localSocket, zmq.POLLIN)
+	poller.Add(d.remoteSocket, zmq.POLLIN)
+	poller.Add(d.localSocket, zmq.POLLIN)
 
-	for {
+	for d.running {
 		polled, err := poller.Poll(100)
 		if err != nil {
 			// TODO Log a warning
@@ -46,11 +77,19 @@ func startDiscovery(service string) {
 			// TODO Handle messages
 		}
 	}
+
+	d.cleanUp()
 }
 
-func stopDiscovery(service string) {
-	log.Printf("Stopping %s discovery", service)
-	delete(discovering, service)
+func (d *Discovery) cleanUp() {
+	d.remoteSocket.Close()
+	d.localSocket.Close()
+}
 
-	// TODO Stop discovery goroutine peacefully
+func (d *Discovery) Stop() {
+	log.Printf("Stopping %s discovery", d.service)
+	delete(discovering, d.service)
+
+	// TODO Stop serve goroutine peacefully
+	d.running = false
 }
