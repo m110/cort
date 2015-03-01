@@ -43,7 +43,8 @@ func (w *Watcher) Start() {
 }
 
 func (w *Watcher) run() {
-	nextNode := emptyNode
+	w.nodes = <-w.newNodes
+	nextNode := w.getNextNode()
 
 	for {
 		select {
