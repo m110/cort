@@ -25,7 +25,7 @@ var emptyNode = Node{
 }
 
 type NodesManager interface {
-	NewNodes(service string) ([]string, error)
+	ServiceNodes(service string) ([]string, error)
 }
 
 func NewWatcher(service string, nextNode chan Node, nodesManager NodesManager) *Watcher {
@@ -64,7 +64,7 @@ func (w *Watcher) run() {
 
 func (w *Watcher) watchNodes() {
 	for {
-		nodes, err := w.nodesManager.NewNodes(w.service)
+		nodes, err := w.nodesManager.ServiceNodes(w.service)
 		if err != nil {
 			log.Println("Nodes manager error:", err.Error())
 			continue

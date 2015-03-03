@@ -15,7 +15,7 @@ type StubNodesManager struct {
 	returned bool
 }
 
-func (s *StubNodesManager) NewNodes(service string) ([]string, error) {
+func (s *StubNodesManager) ServiceNodes(service string) ([]string, error) {
 	if !s.returned {
 		s.returned = true
 		return []string{"a", "b", "c"}, nil

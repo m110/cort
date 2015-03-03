@@ -25,7 +25,7 @@ func NewConsulProxy() (*ConsulProxy, error) {
 	return consulProxy, nil
 }
 
-func (c *ConsulProxy) NewNodes(service string) ([]string, error) {
+func (c *ConsulProxy) ServiceNodes(service string) ([]string, error) {
 	tags := ""
 	opts := &api.QueryOptions{}
 
