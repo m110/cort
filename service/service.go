@@ -1,16 +1,14 @@
 package service
 
 import (
-	"github.com/hashicorp/consul/api"
-	"log"
-
+	"github.com/m110/cort/resources/consul"
 	"github.com/m110/cort/rpc"
 )
 
 type Service struct {
 	name   string
 	server *rpc.Server
-	consul *api.Client
+	consul *consul.ConsulProxy
 }
 
 func NewService(name string, address string, port int) *Service {
@@ -26,7 +24,7 @@ func NewService(name string, address string, port int) *Service {
 func (s *Service) Start() error {
 	var err error
 
-	s.consul, err = api.NewClient(api.DefaultConfig())
+	s.consul, err = consul.NewConsulProxy()
 	if err != nil {
 		return err
 	}
@@ -61,33 +59,15 @@ func (s *Service) Stop() error {
 }
 
 func (s *Service) Register() error {
-	log.Println("Registering service with ID:", s.server.Id())
-
-	agent := s.consul.Agent()
-	err := agent.ServiceRegister(&api.AgentServiceRegistration{
-		ID:      s.server.Id(),
-		Name:    s.name,
-		Tags:    []string{},
-		Address: s.server.Address(),
-		Port:    s.server.Port(),
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.consul.ServiceRegister(
+		s.server.Id(),
+		s.name,
+		s.server.Address(),
+		s.server.Port(),
+		[]string{},
+	)
 }
 
 func (s *Service) Deregister() error {
-	log.Println("Deregistering service")
-
-	agent := s.consul.Agent()
-	err := agent.ServiceDeregister(s.server.Id())
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.consul.ServiceDeregister(s.server.Id())
 }

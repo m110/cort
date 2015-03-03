@@ -2,6 +2,7 @@ package consul
 
 import (
 	"github.com/hashicorp/consul/api"
+	"log"
 )
 
 type ConsulProxy struct {
@@ -46,4 +47,22 @@ func (c *ConsulProxy) ServiceNodes(service string) ([]string, error) {
 	}
 
 	return newNodes, nil
+}
+
+func (c *ConsulProxy) ServiceRegister(id, name, address string, port int, tags []string) error {
+	log.Println("Registering service:", id)
+
+	return c.client.Agent().ServiceRegister(&api.AgentServiceRegistration{
+		ID:      id,
+		Name:    name,
+		Address: address,
+		Port:    port,
+		Tags:    tags,
+	})
+}
+
+func (c *ConsulProxy) ServiceDeregister(id string) error {
+	log.Println("Deregistering service:", id)
+
+	return c.client.Agent().ServiceDeregister(id)
 }
