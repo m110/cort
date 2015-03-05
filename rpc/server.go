@@ -47,6 +47,11 @@ func (s *Server) Start() error {
 		return err
 	}
 
+	err = s.remoteSocket.SetIdentity(s.remoteEndpoint)
+	if err != nil {
+		return err
+	}
+
 	s.remoteSocket.Bind(s.remoteEndpoint)
 	if err != nil {
 		return err
