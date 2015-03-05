@@ -30,7 +30,7 @@ Some thoughts:
     * First socket, for incoming requests from remote services and outgoing responses, binds with **TCP** as transport and the address specified by the service as endpoint.
     * Second socket, for worker goroutines, binds with **inproc** as transport and some unique name (known to workers) as endpoint.
     * Workers use **REQ** sockets (for proper load balancing, as proposed in the ZMQ Guide).
-* Go's channels could work probably just as well as inproc sockets for local communication. However, it seems like using ZMQ sockets for entire service-to-service communication will make local routing easier and more clear.
+* Go's channels could work probably just as well as inproc sockets for local communication. However, it seems like using ZMQ sockets for entire service-to-service communication will make local routing easier and more clear. Although, channels might be more suitable for server workers.
 
 ## Discovery
 
