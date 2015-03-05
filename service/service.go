@@ -11,12 +11,12 @@ type Service struct {
 	consul *consul.ConsulProxy
 }
 
-func NewService(name string, address string, port int) *Service {
+func NewService(name, address string, port, workers int) *Service {
 	service := &Service{
 		name: name,
 	}
 
-	service.server = rpc.NewServer(address, port)
+	service.server = rpc.NewServer(address, port, workers)
 
 	return service
 }

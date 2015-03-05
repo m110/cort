@@ -12,7 +12,7 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	srv := service.NewService("ExampleService", "127.0.0.1", 9999)
+	srv := service.NewService("ExampleService", "127.0.0.1", 9999, 3)
 
 	go func() {
 		<-c

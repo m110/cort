@@ -38,6 +38,13 @@ At this time, [Consul](http://consul.io/) is going to be used for services regis
 
 The usage of [Consul Go API](https://github.com/hashicorp/consul/tree/master/api) seems pretty straightforward.
 
+## TODO
+
+Discovery:
+
+* Should connect to a new node after it is discovered. Then send some kind of heartbeat.
+* Re-think which module should handle this and how.
+
 ## Examples
 
 ```go

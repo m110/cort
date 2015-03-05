@@ -5,23 +5,33 @@ import (
 	"fmt"
 	zmq "github.com/pebbe/zmq4"
 	"log"
+	"strconv"
 )
 
 type Server struct {
 	id      string
 	address string
 	port    int
+	workers int
 	running bool
 
 	remoteSocket  *zmq.Socket
 	workersSocket *zmq.Socket
+
+	remoteEndpoint  string
+	workersEndpoint string
 }
 
-func NewServer(address string, port int) *Server {
+func NewServer(address string, port int, workers int) *Server {
+	id := fmt.Sprintf("%s:%d", address, port)
+
 	server := &Server{
-		id:      fmt.Sprintf("%s:%d", address, port),
-		address: address,
-		port:    port,
+		id:              id,
+		address:         address,
+		port:            port,
+		workers:         workers,
+		remoteEndpoint:  fmt.Sprintf("tcp://%s:%d", address, port),
+		workersEndpoint: "inproc://" + id,
 	}
 
 	return server
@@ -37,7 +47,7 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	s.remoteSocket.Bind(fmt.Sprintf("tcp://%s:%d", s.address, s.port))
+	s.remoteSocket.Bind(s.remoteEndpoint)
 	if err != nil {
 		return err
 	}
@@ -47,7 +57,12 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	err = s.workersSocket.Bind("inproc://" + s.id)
+	err = s.workersSocket.Bind(s.workersEndpoint)
+	if err != nil {
+		return err
+	}
+
+	err = s.startWorkers()
 	if err != nil {
 		return err
 	}
@@ -61,7 +76,8 @@ func (s *Server) Start() error {
 	for s.running {
 		polled, err := poller.Poll(100)
 		if err != nil {
-			// TODO Log a warning
+			log.Println("ZMQ poll failed:", err)
+			continue
 		}
 
 		if len(polled) > 0 {
@@ -80,6 +96,23 @@ func (s *Server) Stop() error {
 	}
 
 	s.running = false
+	return nil
+}
+
+func (s *Server) startWorkers() error {
+	if s.running {
+		return errors.New("Server is already running")
+	}
+
+	for i := 1; i <= s.workers; i++ {
+		worker, err := NewWorker(strconv.Itoa(i), s.workersEndpoint)
+		if err != nil {
+			return err
+		}
+
+		go worker.Start()
+	}
+
 	return nil
 }
 
