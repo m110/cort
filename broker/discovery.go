@@ -1,6 +1,6 @@
 // Discovery is responsible for watching registered service nodes.
 // It is tightly connected with Broker and is started along with it (i.e. per one remote service).
-package discovery
+package broker
 
 import (
 	"log"

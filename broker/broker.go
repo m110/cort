@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"errors"
-	"github.com/m110/cort/discovery"
 	"github.com/m110/cort/resources/consul"
 )
 
@@ -70,7 +69,7 @@ func (b *Broker) Start() error {
 		return err
 	}
 
-	discovery := discovery.NewDiscovery(b.service, b.nextNode, nodesManager)
+	discovery := NewDiscovery(b.service, b.nextNode, nodesManager)
 	discovery.Start()
 
 	b.running = true
