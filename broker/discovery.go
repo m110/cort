@@ -10,28 +10,34 @@ type Discovery struct {
 	service string
 	nodes   []Node
 
-	newNodes chan []Node
-	nextNode chan string
-
 	nodesManager NodesManager
+
+	// Channels for communication with Broker
+	nodeCommand  <-chan NodeMessage
+	nodeResponse chan<- NodeMessage
+	nextNode     chan<- string
+
+	newNodes chan []Node
 }
 
 type Node struct {
 	Uri        string
-	alive      bool
-	registered bool
+	Alive      bool
+	Registered bool
 }
 
 type NodesManager interface {
 	ServiceNodes(service string) ([]string, error)
 }
 
-func NewDiscovery(service string, nextNode chan string, nodesManager NodesManager) *Discovery {
+func NewDiscovery(service string, nodesManager NodesManager, nodeCommand, nodeResponse chan NodeMessage, nextNode chan string) *Discovery {
 	return &Discovery{
 		service:      service,
-		newNodes:     make(chan []Node),
-		nextNode:     nextNode,
 		nodesManager: nodesManager,
+		nodeCommand:  nodeCommand,
+		nodeResponse: nodeResponse,
+		nextNode:     nextNode,
+		newNodes:     make(chan []Node),
 	}
 }
 

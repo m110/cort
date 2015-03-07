@@ -17,7 +17,14 @@ type Broker struct {
 	remoteSocket *zmq.Socket
 	localSocket  *zmq.Socket
 
-	nextNode chan string
+	nodeCommand  chan NodeMessage
+	nodeResponse chan NodeMessage
+	nextNode     chan string
+}
+
+type NodeMessage struct {
+	Node    string
+	Message string
 }
 
 var brokers = map[string]*Broker{}
@@ -41,8 +48,10 @@ func Start(service string) error {
 
 func newBroker(service string) *Broker {
 	discovery := &Broker{
-		service:  service,
-		nextNode: make(chan string),
+		service:      service,
+		nodeCommand:  make(chan NodeMessage),
+		nodeResponse: make(chan NodeMessage),
+		nextNode:     make(chan string),
 	}
 
 	return discovery
@@ -69,7 +78,7 @@ func (b *Broker) Start() error {
 		return err
 	}
 
-	discovery := NewDiscovery(b.service, b.nextNode, nodesManager)
+	discovery := NewDiscovery(b.service, nodesManager, b.nodeCommand, b.nodeResponse, b.nextNode)
 	discovery.Start()
 
 	b.running = true

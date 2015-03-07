@@ -29,7 +29,7 @@ func TestDiscovery(t *testing.T) {
 
 	expected := []string{"a", "b", "c", "a", "b", "c", "a"}
 
-	discovery := NewDiscovery("AnyService", nextNode, &StubNodesManager{})
+	discovery := NewDiscovery("AnyService", &StubNodesManager{}, nil, nil, nextNode)
 	discovery.Start()
 
 	for i, want := range expected {
