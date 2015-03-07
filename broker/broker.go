@@ -33,8 +33,8 @@ type Broker struct {
 }
 
 type NodeMessage struct {
-	Uri     string
 	Message Message
+	Uri     string
 }
 
 var brokers = map[string]*Broker{}
@@ -143,6 +143,7 @@ func (b *Broker) handleNodeCommand(message NodeMessage) error {
 	switch message.Message {
 	case CONNECT:
 		b.remoteSocket.Connect(message.Uri)
+		b.sendRemote(message.Uri, "PING")
 	case DISCONNECT:
 		b.remoteSocket.Disconnect(message.Uri)
 	case PING:
@@ -166,7 +167,7 @@ func (b *Broker) handleRemoteSocket() error {
 	log.Println("Received message from %s (%s): %s", b.service, uri, message)
 
 	if request == "PONG" {
-		b.nodeResponse <- NodeMessage{uri, PONG}
+		b.nodeResponse <- NodeMessage{PONG, uri}
 	} else {
 		err = b.sendLocal(message...)
 	}

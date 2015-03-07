@@ -1,9 +1,9 @@
 package broker
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
+	"reflect"
 	"testing"
 )
 
@@ -15,27 +15,30 @@ type StubNodesManager struct {
 	returned bool
 }
 
-func (s *StubNodesManager) ServiceNodes(service string) ([]string, error) {
-	if !s.returned {
-		s.returned = true
-		return []string{"a", "b", "c"}, nil
-	} else {
-		return nil, errors.New("Timed out")
-	}
-}
-
-func TestDiscovery(t *testing.T) {
-	nextNode := make(chan string)
-
+func TestNextNode(t *testing.T) {
 	expected := []string{"a", "b", "c", "a", "b", "c", "a"}
 
-	discovery := NewDiscovery("AnyService", &StubNodesManager{}, nil, nil, nextNode)
-	discovery.Start()
+	discovery := NewDiscovery("AnyService", nil, nil, nil, nil)
+	discovery.nodesCycle = []string{"a", "b", "c"}
 
 	for i, want := range expected {
-		got := <-nextNode
+		got := discovery.getNextNode()
 		if got != want {
 			t.Errorf("Wanted %s at %d, got %s", want, i, got)
 		}
+	}
+}
+
+func TestRemovedNodes(t *testing.T) {
+	discovery := NewDiscovery("AnyService", nil, nil, nil, nil)
+
+	discovery.nodes["key_1"] = &Node{}
+	discovery.nodes["key_2"] = &Node{}
+
+	removed := discovery.removedNodes([]string{"key_1", "key_3"})
+	expected := []string{"key_2"}
+
+	if !reflect.DeepEqual(removed, expected) {
+		t.Errorf("Removed nodes returned %s instead of %s", removed, expected)
 	}
 }
