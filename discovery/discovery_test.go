@@ -24,18 +24,18 @@ func (s *StubNodesManager) ServiceNodes(service string) ([]string, error) {
 	}
 }
 
-func TestWatcher(t *testing.T) {
-	nextNode := make(chan Node)
+func TestDiscovery(t *testing.T) {
+	nextNode := make(chan string)
 
 	expected := []string{"a", "b", "c", "a", "b", "c", "a"}
 
-	watcher := NewWatcher("AnyService", nextNode, &StubNodesManager{})
-	watcher.Start()
+	discovery := NewDiscovery("AnyService", nextNode, &StubNodesManager{})
+	discovery.Start()
 
 	for i, want := range expected {
 		got := <-nextNode
-		if got.Uri != want {
-			t.Errorf("Wanted %s at %d, got %s", want, i, got.Uri)
+		if got != want {
+			t.Errorf("Wanted %s at %d, got %s", want, i, got)
 		}
 	}
 }

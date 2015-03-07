@@ -3,7 +3,7 @@ package rpc
 import (
 	zmq "github.com/pebbe/zmq4"
 
-	"github.com/m110/cort/discovery"
+	"github.com/m110/cort/broker"
 )
 
 type Client struct {
@@ -22,7 +22,7 @@ func NewClient(service string) *Client {
 func (c *Client) Connect() error {
 	var err error
 
-	err = discovery.Start(c.service)
+	err = broker.Start(c.service)
 	if err != nil {
 		return err
 	}
