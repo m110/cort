@@ -3,11 +3,21 @@
 package broker
 
 import (
+	"errors"
+	"fmt"
 	zmq "github.com/pebbe/zmq4"
 	"log"
 
-	"errors"
 	"github.com/m110/cort/resources/consul"
+)
+
+type Message int
+
+const (
+	CONNECT Message = iota
+	DISCONNECT
+	PING
+	PONG
 )
 
 type Broker struct {
@@ -23,8 +33,8 @@ type Broker struct {
 }
 
 type NodeMessage struct {
-	Node    string
-	Message string
+	Uri     string
+	Message Message
 }
 
 var brokers = map[string]*Broker{}
@@ -93,6 +103,15 @@ func (b *Broker) serve() {
 	poller.Add(b.localSocket, zmq.POLLIN)
 
 	for b.running {
+		select {
+		case message := <-b.nodeCommand:
+			err := b.handleNodeCommand(message)
+			if err != nil {
+				log.Println("Node command error:", err)
+			}
+		default:
+		}
+
 		polled, err := poller.Poll(100)
 		if err != nil {
 			log.Println("ZMQ poll failed:", err)
@@ -120,40 +139,75 @@ func (b *Broker) serve() {
 	b.cleanUp()
 }
 
+func (b *Broker) handleNodeCommand(message NodeMessage) error {
+	switch message.Message {
+	case CONNECT:
+		b.remoteSocket.Connect(message.Uri)
+	case DISCONNECT:
+		b.remoteSocket.Disconnect(message.Uri)
+	case PING:
+		b.sendRemote(message.Uri, "PING")
+	default:
+		return fmt.Errorf("Unknown node message: %d", message.Message)
+	}
+
+	return nil
+}
+
 func (b *Broker) handleRemoteSocket() error {
-	msg, err := b.remoteSocket.RecvMessage(0)
+	response, err := b.remoteSocket.RecvMessage(0)
 	if err != nil {
 		return err
 	}
 
-	_, err = b.localSocket.SendMessage(msg)
+	uri, message := response[0], response[1:]
+	request := message[len(message)-1]
+
+	log.Println("Received message from %s (%s): %s", b.service, uri, message)
+
+	if request == "PONG" {
+		b.nodeResponse <- NodeMessage{uri, PONG}
+	} else {
+		err = b.sendLocal(message...)
+	}
 
 	return err
 }
 
 func (b *Broker) handleLocalSocket() error {
 	var err error
-	msg, err := b.localSocket.RecvMessage(0)
+	request, err := b.localSocket.RecvMessage(0)
 	if err != nil {
 		return err
 	}
 
-	node := <-b.nextNode
-	if node == "" {
+	uri := <-b.nextNode
+	if uri == "" {
 		err = errors.New("No nodes available")
-		b.sendError(b.localSocket, msg, err)
+		b.sendError(b.localSocket, request, err)
 		return err
 	}
 
-	log.Printf("Routing message to %s (%s): %s\n", b.service, node, msg[1:])
-	_, err = b.remoteSocket.SendMessage(node, msg)
+	log.Printf("Routing message to %s (%s): %s\n", b.service, uri, request)
+	err = b.sendRemote(uri, request...)
 
 	return err
 }
 
+func (b *Broker) sendRemote(uri string, frames ...string) error {
+	frames = append([]string{uri}, frames...)
+	_, err := b.remoteSocket.SendMessage(frames)
+	return err
+}
+
+func (b *Broker) sendLocal(frames ...string) error {
+	_, err := b.localSocket.SendMessage(frames)
+	return err
+}
+
 func (b *Broker) sendError(socket *zmq.Socket, msg []string, err error) error {
-	errMsg := append(msg[0:len(msg)-1], err.Error())
-	_, err = socket.SendMessage(errMsg)
+	msg[len(msg)-1] = err.Error()
+	_, err = socket.SendMessage(msg)
 	return err
 }
 
