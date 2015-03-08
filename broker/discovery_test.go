@@ -29,6 +29,21 @@ func TestNextNode(t *testing.T) {
 	}
 }
 
+func TestUpdateNodesCycle(t *testing.T) {
+	discovery := NewDiscovery("AnyService", nil, nil, nil, nil)
+
+	discovery.nodes["key_1"] = &Node{Uri: "key_1", Alive: true}
+	discovery.nodes["key_2"] = &Node{Uri: "key_2", Alive: false}
+	discovery.nodes["key_3"] = &Node{Uri: "key_3", Alive: true}
+
+	expected := []string{"key_1", "key_3"}
+	discovery.updateNodesCycle()
+
+	if !reflect.DeepEqual(discovery.nodesCycle, expected) {
+		t.Errorf("nodesCycle contains %s instead of %s", discovery.nodesCycle, expected)
+	}
+}
+
 func TestRemovedNodes(t *testing.T) {
 	discovery := NewDiscovery("AnyService", nil, nil, nil, nil)
 

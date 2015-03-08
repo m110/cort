@@ -104,6 +104,8 @@ func (d *Discovery) processNewNodes(newNodes []string) {
 		d.nodes[uri].Alive = false
 		d.nodeCommand <- NodeMessage{DISCONNECT, uri}
 	}
+
+	d.updateNodesCycle()
 }
 
 func (d *Discovery) handleNodeResponse(message NodeMessage) error {
@@ -131,6 +133,16 @@ func (d *Discovery) watchNodes() {
 		}
 
 		d.newNodes <- nodes
+	}
+}
+
+func (d *Discovery) updateNodesCycle() {
+	d.nodesCycle = nil
+
+	for _, node := range d.nodes {
+		if node.Alive {
+			d.nodesCycle = append(d.nodesCycle, node.Uri)
+		}
 	}
 }
 
