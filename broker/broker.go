@@ -142,11 +142,14 @@ func (b *Broker) serve() {
 func (b *Broker) handleNodeCommand(message NodeMessage) error {
 	switch message.Message {
 	case CONNECT:
+		log.Println("Connecting to", message.Uri)
 		b.remoteSocket.Connect(message.Uri)
 		b.sendRemote(message.Uri, "PING")
 	case DISCONNECT:
+		log.Println("Disconnecting from", message.Uri)
 		b.remoteSocket.Disconnect(message.Uri)
 	case PING:
+		log.Println("Sending PING to", message.Uri)
 		b.sendRemote(message.Uri, "PING")
 	default:
 		return fmt.Errorf("Unknown node message: %d", message.Message)
@@ -164,7 +167,7 @@ func (b *Broker) handleRemoteSocket() error {
 	uri, message := response[0], response[1:]
 	request := message[len(message)-1]
 
-	log.Println("Received message from %s (%s): %s", b.service, uri, message)
+	log.Printf("Received message from %s (%s): %s\n", b.service, uri, message)
 
 	if request == "PONG" {
 		b.nodeResponse <- NodeMessage{PONG, uri}
