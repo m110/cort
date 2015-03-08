@@ -50,18 +50,15 @@ func (d *Discovery) Start() {
 }
 
 func (d *Discovery) run() {
-	nextNode := ""
+	d.processNewNodes(<-d.newNodes)
+	nextNode := d.getNextNode()
 
 	for {
 		select {
 		case newNodes := <-d.newNodes:
 			log.Println("Received nodes update:", newNodes)
 
-			err := d.processNewNodes(newNodes)
-			if err != nil {
-				log.Println("Error while new nodes processing:", err)
-			}
-
+			d.processNewNodes(newNodes)
 			nextNode = d.getNextNode()
 		default:
 			select {
@@ -78,7 +75,7 @@ func (d *Discovery) run() {
 	}
 }
 
-func (d *Discovery) processNewNodes(newNodes []string) error {
+func (d *Discovery) processNewNodes(newNodes []string) {
 	for _, uri := range newNodes {
 		node, ok := d.nodes[uri]
 
@@ -107,8 +104,6 @@ func (d *Discovery) processNewNodes(newNodes []string) error {
 		d.nodes[uri].Alive = false
 		d.nodeCommand <- NodeMessage{DISCONNECT, uri}
 	}
-
-	return nil
 }
 
 func (d *Discovery) handleNodeResponse(message NodeMessage) error {
