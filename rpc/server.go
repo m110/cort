@@ -23,7 +23,7 @@ type Server struct {
 }
 
 func NewServer(address string, port int, workers int) *Server {
-	id := fmt.Sprintf("%s:%d", address, port)
+	id := fmt.Sprintf("tcp://%s:%d", address, port)
 
 	server := &Server{
 		id:              id,
@@ -86,7 +86,10 @@ func (s *Server) Start() error {
 		}
 
 		if len(polled) > 0 {
-			s.handleSockets(polled)
+			err = s.handleSockets(polled)
+			if err != nil {
+				log.Println("handleSockets error:", err)
+			}
 		}
 	}
 
@@ -121,23 +124,51 @@ func (s *Server) startWorkers() error {
 	return nil
 }
 
-func (s *Server) handleSockets(polled []zmq.Polled) {
+func (s *Server) handleSockets(polled []zmq.Polled) error {
 	for _, p := range polled {
 		switch socket := p.Socket; socket {
 		case s.remoteSocket:
-			s.handleRemoteSocket()
+			err := s.handleRemoteSocket()
+			if err != nil {
+				return err
+			}
 		case s.workersSocket:
-			s.handleWorkersSocket()
+			err := s.handleWorkersSocket()
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
 
-func (s *Server) handleRemoteSocket() {
-	// TODO Receive message and route it to one of available workers
+func (s *Server) handleRemoteSocket() error {
+	message, err := s.remoteSocket.RecvMessage(0)
+	if err != nil {
+		return err
+	}
+
+	uri, request := message[0], message[len(message)-1]
+
+	// Should not be changed by server
+	envelope := message[1 : len(message)-1]
+
+	log.Println("Received request:", request)
+
+	if request == "PING" {
+		s.remoteSocket.SendMessage(uri, "PONG")
+	} else {
+		// TODO Receive message and route it to one of available workers
+		s.remoteSocket.SendMessage(uri, envelope, "Not Implemented")
+	}
+
+	return nil
 }
 
-func (s *Server) handleWorkersSocket() {
+func (s *Server) handleWorkersSocket() error {
 	// TODO Receive message and route it back to the remote client
+	return nil
 }
 
 func (s *Server) Id() string {
