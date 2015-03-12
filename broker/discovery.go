@@ -50,8 +50,7 @@ func (d *Discovery) Start() {
 }
 
 func (d *Discovery) run() {
-	d.processNewNodes(<-d.newNodes)
-	nextNode := d.getNextNode()
+	nextNode := ""
 
 	for {
 		select {
@@ -68,6 +67,8 @@ func (d *Discovery) run() {
 				err := d.handleNodeResponse(message)
 				if err != nil {
 					log.Println("Node response error:", err)
+				} else {
+					nextNode = d.getNextNode()
 				}
 			default:
 			}
@@ -77,9 +78,9 @@ func (d *Discovery) run() {
 
 func (d *Discovery) processNewNodes(newNodes []string) {
 	for _, uri := range newNodes {
-		node, ok := d.nodes[uri]
+		node, exists := d.nodes[uri]
 
-		if ok {
+		if exists {
 			if !node.Registered {
 				log.Println("Setting node", uri, "as registered")
 				node.Registered = true
@@ -110,12 +111,16 @@ func (d *Discovery) processNewNodes(newNodes []string) {
 
 func (d *Discovery) handleNodeResponse(message NodeMessage) error {
 	log.Println("Received response from broker:", message)
+
 	switch message.Message {
 	case PONG:
 		_, ok := d.nodes[message.Uri]
 		if ok {
-			log.Println("Setting node", message.Uri, "as alive")
-			d.nodes[message.Uri].Alive = true
+			if !d.nodes[message.Uri].Alive {
+				log.Println("Setting node", message.Uri, "as alive")
+				d.nodes[message.Uri].Alive = true
+				d.updateNodesCycle()
+			}
 		}
 	default:
 		return fmt.Errorf("Unknown node message: %d", message.Message)
@@ -144,6 +149,8 @@ func (d *Discovery) updateNodesCycle() {
 			d.nodesCycle = append(d.nodesCycle, node.Uri)
 		}
 	}
+
+	log.Println("New nodes cycle:", d.nodesCycle)
 }
 
 func (d *Discovery) getNextNode() string {

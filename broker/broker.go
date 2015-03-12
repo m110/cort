@@ -3,7 +3,6 @@
 package broker
 
 import (
-	"errors"
 	"fmt"
 	zmq "github.com/pebbe/zmq4"
 	"log"
@@ -59,8 +58,8 @@ func Start(service string) error {
 func newBroker(service string) *Broker {
 	discovery := &Broker{
 		service:      service,
-		nodeCommand:  make(chan NodeMessage),
-		nodeResponse: make(chan NodeMessage),
+		nodeCommand:  make(chan NodeMessage, 1),
+		nodeResponse: make(chan NodeMessage, 1),
 		nextNode:     make(chan string),
 	}
 
@@ -139,6 +138,7 @@ func (b *Broker) serve() {
 	b.cleanUp()
 }
 
+// handleNodeCommand handles command sent by discovery.
 func (b *Broker) handleNodeCommand(message NodeMessage) error {
 	switch message.Message {
 	case CONNECT:
@@ -158,44 +158,56 @@ func (b *Broker) handleNodeCommand(message NodeMessage) error {
 	return nil
 }
 
+// handleRemoteSocket receives message from remote service and routes it back to the client.
+// Frames received from remote service:
+//
+//     | remote_uri | client_id | (empty) | response |
+//
+// Frames routed to local client:
+//
+//     | client_id | (empty) | response |
 func (b *Broker) handleRemoteSocket() error {
-	response, err := b.remoteSocket.RecvMessage(0)
+	message, err := b.remoteSocket.RecvMessage(0)
 	if err != nil {
 		return err
 	}
 
-	uri, message := response[0], response[1:]
-	request := message[len(message)-1]
+	uri, response := message[0], message[1:]
 
-	log.Printf("Received message from %s (%s): %s\n", b.service, uri, message)
+	log.Printf("Received response from %s (%s): %s\n", b.service, uri, response)
 
-	if request == "PONG" {
-		b.nodeResponse <- NodeMessage{PONG, uri}
-	} else {
-		err = b.sendLocal(message...)
+	// Every response is treated as a PONG
+	b.nodeResponse <- NodeMessage{PONG, uri}
+
+	if response[len(response)-1] == "PONG" {
+		return nil
 	}
 
-	return err
+	return b.sendLocal(response...)
 }
 
+// handleLocalSocket received message from local socket and routes it to the remote service.
+// Frames received from local client:
+//
+//     | client_id | (empty) | request |
+//
+// Frames routed to remote service:
+//
+//     | remote_uri | client_id | (empty) | request |
 func (b *Broker) handleLocalSocket() error {
-	var err error
-	request, err := b.localSocket.RecvMessage(0)
+	uri := <-b.nextNode
+	if uri == "" {
+		return nil
+	}
+
+	message, err := b.localSocket.RecvMessage(0)
 	if err != nil {
 		return err
 	}
 
-	uri := <-b.nextNode
-	if uri == "" {
-		err = errors.New("No nodes available")
-		b.sendError(b.localSocket, request, err)
-		return err
-	}
+	log.Printf("Routing message to %s (%s): %s\n", b.service, uri, message)
 
-	log.Printf("Routing message to %s (%s): %s\n", b.service, uri, request)
-	err = b.sendRemote(uri, request...)
-
-	return err
+	return b.sendRemote(uri, message...)
 }
 
 func (b *Broker) sendRemote(uri string, frames ...string) error {
