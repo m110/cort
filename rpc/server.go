@@ -15,6 +15,8 @@ type Server struct {
 	workers int
 	running bool
 
+	workersQueue []string
+
 	remoteSocket  *zmq.Socket
 	workersSocket *zmq.Socket
 
@@ -143,32 +145,83 @@ func (s *Server) handleSockets(polled []zmq.Polled) error {
 	return nil
 }
 
+// handleRemoteSocket receives message from remote service and routes it to first worker available.
+// Frames received from remote service:
+//
+//     | envelope | request |
+//
+// Frames routed to worker:
+//
+//     | worker_id | (empty) | envelope | request |
 func (s *Server) handleRemoteSocket() error {
 	message, err := s.remoteSocket.RecvMessage(0)
 	if err != nil {
 		return err
 	}
 
-	uri, request := message[0], message[len(message)-1]
+	log.Println("Received from remote service:", message)
 
-	// Should not be changed by server
-	envelope := message[1 : len(message)-1]
+	envelope := message[:len(message)-1]
+	request := message[len(message)-1]
 
-	log.Println("Received request:", request)
+	worker_id := s.nextWorker()
 
-	if request == "PING" {
-		s.remoteSocket.SendMessage(uri, "PONG")
-	} else {
-		// TODO Receive message and route it to one of available workers
-		s.remoteSocket.SendMessage(uri, envelope, "Not Implemented")
+	if worker_id == "" {
+		_, err = s.remoteSocket.SendMessage(envelope, "No workers available")
+		return err
 	}
 
-	return nil
+	_, err = s.workersSocket.SendMessage(worker_id, "", envelope, request)
+	return err
 }
 
+// handleWorkersSocket receives message from worker and routes it to remote service.
+// Frames received from worker:
+//
+//     | worker_id | (empty) | remote_uri | envelope | response |
+//
+// Frames routed to remote service:
+//
+//     | remote_id | envelope | response |
+
 func (s *Server) handleWorkersSocket() error {
-	// TODO Receive message and route it back to the remote client
-	return nil
+	message, err := s.workersSocket.RecvMessage(0)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Received from worker:", message)
+
+	worker_id := message[0]
+
+	empty_frame := message[1]
+	if empty_frame != "" {
+		return fmt.Errorf("Empty frame contains invalid data: %s", empty_frame)
+	}
+
+	s.workersQueue = append(s.workersQueue, worker_id)
+
+	response := message[len(message)-1]
+	if response == "READY" {
+		log.Println("Worker", worker_id, "ready")
+		return nil
+	}
+
+	remote_id := message[2]
+	envelope := message[3 : len(message)-1]
+	_, err = s.remoteSocket.SendMessage(remote_id, envelope, response)
+	return err
+}
+
+func (s *Server) nextWorker() string {
+	if len(s.workersQueue) == 0 {
+		return ""
+	}
+
+	next := s.workersQueue[0]
+	s.workersQueue = s.workersQueue[1:]
+
+	return next
 }
 
 func (s *Server) Id() string {

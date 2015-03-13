@@ -25,6 +25,11 @@ func NewWorker(id, endpoint string) (*Worker, error) {
 		return nil, err
 	}
 
+	err = worker.socket.SetIdentity(id)
+	if err != nil {
+		return nil, err
+	}
+
 	err = worker.socket.Connect(endpoint)
 	if err != nil {
 		return nil, err
@@ -47,7 +52,9 @@ func (w *Worker) Start() {
 			continue
 		}
 
+		envelope := message[:len(message)-1]
 		request := message[len(message)-1]
+
 		response, err := w.processRequest(request)
 		if err != nil {
 			log.Println("Error while processing request:", err)
@@ -56,15 +63,14 @@ func (w *Worker) Start() {
 			continue
 		}
 
-		w.socket.SendMessage(response)
+		w.socket.SendMessage(envelope, response)
 	}
 }
 
-func (w *Worker) stop() {
-	w.running = false
-}
-
 func (w *Worker) processRequest(request string) (string, error) {
-	// TODO Process the request
-	return request, nil
+	if request == "PING" {
+		return "PONG", nil
+	}
+
+	return "Not implemented", nil
 }
