@@ -186,7 +186,7 @@ func (b *Broker) handleRemoteSocket() error {
 	return b.sendLocal(response...)
 }
 
-// handleLocalSocket received message from local socket and routes it to the remote service.
+// handleLocalSocket receives message from local socket and routes it to the remote service.
 // Frames received from local client:
 //
 //     | client_id | (empty) | request |
