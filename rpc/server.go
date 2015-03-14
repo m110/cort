@@ -8,6 +8,10 @@ import (
 	"strconv"
 )
 
+const (
+	workerReadyMessage = "READY"
+)
+
 type Server struct {
 	id      string
 	address string
@@ -202,7 +206,7 @@ func (s *Server) handleWorkersSocket() error {
 	s.workersQueue = append(s.workersQueue, worker_id)
 
 	response := message[len(message)-1]
-	if response == "READY" {
+	if response == workerReadyMessage {
 		log.Println("Worker", worker_id, "ready")
 		return nil
 	}

@@ -41,7 +41,7 @@ func NewWorker(id, endpoint string) (*Worker, error) {
 func (w *Worker) Start() {
 	w.running = true
 
-	w.socket.SendMessage("READY")
+	w.socket.SendMessage(workerReadyMessage)
 
 	log.Printf("Worker-%s ready\n", w.id)
 
