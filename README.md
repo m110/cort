@@ -16,6 +16,15 @@ Also, made for fun.
 
 Cort is meant to be used as a framework for independent microservices, providing brokerless communication and service discovery, being easy to use and as reliable as possible.
 
+Currently focused on bulletproof communication.
+
+## TODO
+
+Discovery:
+
+* Should connect to a new node after it is discovered. Then send some kind of heartbeat.
+* Re-think which module should handle this and how.
+
 ## Communication
 
 Services exchange messages using ZeroMQ in a brokerless model (peer-to-peer). Some variation of [the Freelance pattern](http://zguide.zeromq.org/page:all#Brokerless-Reliability-Freelance-Pattern) is going to be used.
@@ -37,13 +46,6 @@ Some thoughts:
 At this time, [Consul](http://consul.io/) is going to be used for services registration and discovery. Various backends should be pluggable in the future, though.
 
 The usage of [Consul Go API](https://github.com/hashicorp/consul/tree/master/api) seems pretty straightforward.
-
-## TODO
-
-Discovery:
-
-* Should connect to a new node after it is discovered. Then send some kind of heartbeat.
-* Re-think which module should handle this and how.
 
 ## Examples
 
