@@ -24,6 +24,7 @@ Discovery:
 
 * Should connect to a new node after it is discovered. Then send some kind of heartbeat.
 * Re-think which module should handle this and how.
+* Discover session disconnects.
 
 ## Communication
 
